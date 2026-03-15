@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncIterator
 
 import structlog
@@ -88,8 +91,24 @@ def _create_webapp() -> FastAPI:
 
     @app.post("/webhook/bot")
     async def webhook_handler(update: dict) -> JSONResponse:
+        # #region agent log
+        try:
+            _log_path = Path(__file__).resolve().parent.parent.parent.parent / "debug-56837c.log"
+            with open(_log_path, "a", encoding="utf-8") as _f:
+                _f.write(json.dumps({"sessionId": "56837c", "hypothesisId": "A", "location": "main.py:webhook_entry", "message": "webhook received", "data": {"update_keys": list(update.keys()), "has_message": "message" in update}, "timestamp": int(time.time() * 1000)}) + "\n")
+        except Exception:
+            pass
+        # #endregion
         telegram_update = Update.model_validate(update, context={"bot": bot})
         await dp.feed_update(bot=bot, update=telegram_update)
+        # #region agent log
+        try:
+            _log_path = Path(__file__).resolve().parent.parent.parent.parent / "debug-56837c.log"
+            with open(_log_path, "a", encoding="utf-8") as _f:
+                _f.write(json.dumps({"sessionId": "56837c", "hypothesisId": "A", "location": "main.py:webhook_after_feed", "message": "feed_update done", "data": {}, "timestamp": int(time.time() * 1000)}) + "\n")
+        except Exception:
+            pass
+        # #endregion
         return JSONResponse({"ok": True})
 
     @app.get("/health")

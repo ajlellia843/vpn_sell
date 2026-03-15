@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+import time
+from pathlib import Path
 from typing import Any, Awaitable, Callable
 
 import structlog
@@ -20,7 +23,15 @@ class ErrorHandlerMiddleware(BaseMiddleware):
     ) -> Any:
         try:
             return await handler(event, data)
-        except Exception:
+        except Exception as e:
+            # #region agent log
+            try:
+                _log_path = Path(__file__).resolve().parent.parent.parent.parent.parent / "debug-56837c.log"
+                with open(_log_path, "a", encoding="utf-8") as _f:
+                    _f.write(json.dumps({"sessionId": "56837c", "hypothesisId": "E", "location": "error_handler.py:catch", "message": "exception in handler", "data": {"exc_type": type(e).__name__, "exc_msg": str(e)}, "timestamp": int(time.time() * 1000)}) + "\n")
+            except Exception:
+                pass
+            # #endregion
             logger.exception("unhandled_error")
             try:
                 if isinstance(event, Message):

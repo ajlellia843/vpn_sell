@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import json
+import time
+from pathlib import Path
+
 import structlog
 from aiogram import F, Router
 from aiogram.filters import CommandStart
@@ -36,6 +40,14 @@ def _api(bot) -> APIClient:  # noqa: ANN001
 
 @router.message(CommandStart())
 async def start_command(message: Message) -> None:
+    # #region agent log
+    _log_path = Path(__file__).resolve().parent.parent.parent.parent.parent / "debug-56837c.log"
+    try:
+        with open(_log_path, "a", encoding="utf-8") as _f:
+            _f.write(json.dumps({"sessionId": "56837c", "hypothesisId": "B", "location": "start.py:start_command_entry", "message": "handler called", "data": {"user_id": message.from_user.id if message.from_user else None}, "timestamp": int(time.time() * 1000)}) + "\n")
+    except Exception:
+        pass
+    # #endregion
     user = message.from_user
     if user:
         try:
@@ -46,11 +58,25 @@ async def start_command(message: Message) -> None:
             )
         except APIError:
             logger.warning("user_register_failed", telegram_id=user.id)
+    # #region agent log
+    try:
+        with open(_log_path, "a", encoding="utf-8") as _f:
+            _f.write(json.dumps({"sessionId": "56837c", "hypothesisId": "C", "location": "start.py:before_answer", "message": "calling message.answer", "data": {}, "timestamp": int(time.time() * 1000)}) + "\n")
+    except Exception:
+        pass
+    # #endregion
     await message.answer(
         start_text(),
         reply_markup=main_menu_keyboard(),
         parse_mode="HTML",
     )
+    # #region agent log
+    try:
+        with open(_log_path, "a", encoding="utf-8") as _f:
+            _f.write(json.dumps({"sessionId": "56837c", "hypothesisId": "D", "location": "start.py:after_answer", "message": "message.answer done", "data": {}, "timestamp": int(time.time() * 1000)}) + "\n")
+    except Exception:
+        pass
+    # #endregion
 
 
 @router.callback_query(CommonMenuCallback.filter(F.action == "menu"))
