@@ -1,0 +1,213 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-vpn}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vpn_secret_change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-vpn_platform}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vpn}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - backend
+
+  user-service:
+    build:
+      context: .
+      dockerfile: services/user_service/Dockerfile
+    environment:
+      SERVICE_NAME: user-service
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://vpn:vpn_secret_change_me@postgres:5432/vpn_platform}
+      SERVICE_API_KEY: ${SERVICE_API_KEY:-change-me}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - backend
+
+  billing-service:
+    build:
+      context: .
+      dockerfile: services/billing_service/Dockerfile
+    environment:
+      SERVICE_NAME: billing-service
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://vpn:vpn_secret_change_me@postgres:5432/vpn_platform}
+      SERVICE_API_KEY: ${SERVICE_API_KEY:-change-me}
+      VPN_SERVICE_URL: http://vpn-service:8000
+      YOOKASSA_SHOP_ID: ${YOOKASSA_SHOP_ID:-}
+      YOOKASSA_SECRET_KEY: ${YOOKASSA_SECRET_KEY:-}
+      YOOKASSA_RETURN_URL: ${YOOKASSA_RETURN_URL:-https://t.me/your_bot}
+      YOOKASSA_WEBHOOK_SECRET: ${YOOKASSA_WEBHOOK_SECRET:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - backend
+
+  vpn-service:
+    build:
+      context: .
+      dockerfile: services/vpn_service/Dockerfile
+    environment:
+      SERVICE_NAME: vpn-service
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://vpn:vpn_secret_change_me@postgres:5432/vpn_platform}
+      SERVICE_API_KEY: ${SERVICE_API_KEY:-change-me}
+      XUI_BASE_URL: ${XUI_BASE_URL:-http://xui-panel:2053}
+      XUI_USERNAME: ${XUI_USERNAME:-admin}
+      XUI_PASSWORD: ${XUI_PASSWORD:-admin}
+      XUI_INBOUND_ID: ${XUI_INBOUND_ID:-1}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - backend
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api_gateway/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      SERVICE_NAME: api-gateway
+      SERVICE_API_KEY: ${SERVICE_API_KEY:-change-me}
+      USER_SERVICE_URL: http://user-service:8000
+      BILLING_SERVICE_URL: http://billing-service:8000
+      VPN_SERVICE_URL: http://vpn-service:8000
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    depends_on:
+      user-service:
+        condition: service_healthy
+      billing-service:
+        condition: service_healthy
+      vpn-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - frontend
+      - backend
+
+  admin-service:
+    build:
+      context: .
+      dockerfile: services/admin_service/Dockerfile
+    ports:
+      - "8001:8000"
+    environment:
+      SERVICE_NAME: admin-service
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://vpn:vpn_secret_change_me@postgres:5432/vpn_platform}
+      SERVICE_API_KEY: ${SERVICE_API_KEY:-change-me}
+      USER_SERVICE_URL: http://user-service:8000
+      BILLING_SERVICE_URL: http://billing-service:8000
+      VPN_SERVICE_URL: http://vpn-service:8000
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-}
+      ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET:-change-me-jwt-secret}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - frontend
+      - backend
+
+  bot-service:
+    build:
+      context: .
+      dockerfile: services/bot_service/Dockerfile
+    environment:
+      SERVICE_NAME: bot-service
+      BOT_TOKEN: ${BOT_TOKEN:-}
+      BOT_MODE: ${BOT_MODE:-polling}
+      API_GATEWAY_URL: http://api-gateway:8000
+      SERVICE_API_KEY: ${SERVICE_API_KEY:-change-me}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    networks:
+      - frontend
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - backend
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    networks:
+      - monitoring
+
+volumes:
+  pgdata:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+  monitoring:
+    driver: bridge

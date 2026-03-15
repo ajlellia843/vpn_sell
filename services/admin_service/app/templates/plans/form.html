@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit Plan" if plan else "Create Plan" }}{% endblock %}
+{% block nav_plans %}bg-gray-900 text-white{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="/plans" class="text-sm text-indigo-600 hover:text-indigo-500 font-medium transition-colors">&larr; Back to Plans</a>
+</div>
+
+<h1 class="text-2xl font-bold text-gray-900 mb-6">{{ "Edit Plan" if plan else "Create Plan" }}</h1>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 max-w-2xl">
+    <form method="post" action="{{ '/plans/' ~ plan.id if plan else '/plans' }}" class="p-6 space-y-5">
+        <div>
+            <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <input type="text" id="name" name="name" required
+                   value="{{ plan.name if plan else '' }}"
+                   class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label for="duration_days" class="block text-sm font-medium text-gray-700 mb-1">Duration (days)</label>
+                <input type="number" id="duration_days" name="duration_days" required min="1"
+                       value="{{ plan.duration_days if plan else 30 }}"
+                       class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div>
+                <label for="price" class="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                <input type="text" id="price" name="price" required
+                       value="{{ plan.price if plan else '' }}"
+                       class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none">
+            </div>
+        </div>
+
+        <div>
+            <label for="currency" class="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+            <input type="text" id="currency" name="currency"
+                   value="{{ plan.currency if plan else 'RUB' }}"
+                   class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none">
+        </div>
+
+        <div>
+            <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <textarea id="description" name="description" rows="3"
+                      class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none">{{ plan.description if plan and plan.description else '' }}</textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label for="traffic_limit_gb" class="block text-sm font-medium text-gray-700 mb-1">Traffic Limit (GB)</label>
+                <input type="number" id="traffic_limit_gb" name="traffic_limit_gb" min="0"
+                       value="{{ plan.traffic_limit_gb if plan and plan.traffic_limit_gb else '' }}"
+                       placeholder="Leave empty for unlimited"
+                       class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div>
+                <label for="device_limit" class="block text-sm font-medium text-gray-700 mb-1">Device Limit</label>
+                <input type="number" id="device_limit" name="device_limit" min="1"
+                       value="{{ plan.device_limit if plan else 1 }}"
+                       class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none">
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <input type="checkbox" id="is_active" name="is_active"
+                   {% if not plan or plan.is_active %}checked{% endif %}
+                   class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+            <label for="is_active" class="text-sm font-medium text-gray-700">Active</label>
+        </div>
+
+        <div class="flex gap-3 pt-2">
+            <button type="submit"
+                    class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors">
+                {{ "Update Plan" if plan else "Create Plan" }}
+            </button>
+            <a href="/plans"
+               class="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

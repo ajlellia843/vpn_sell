@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Subscriptions{% endblock %}
+{% block nav_subscriptions %}bg-gray-900 text-white{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Subscriptions</h1>
+    <span class="text-sm text-gray-500">{{ total }} total</span>
+</div>
+
+<div class="mb-5">
+    <form hx-get="/subscriptions" hx-target="#subs-table" hx-swap="innerHTML" class="flex gap-3 items-center">
+        <select name="status"
+                class="rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
+                onchange="this.form.requestSubmit()">
+            <option value="">All statuses</option>
+            <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+            <option value="expired" {% if status == 'expired' %}selected{% endif %}>Expired</option>
+            <option value="cancelled" {% if status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+            <option value="suspended" {% if status == 'suspended' %}selected{% endif %}>Suspended</option>
+        </select>
+    </form>
+</div>
+
+<div id="subs-table">
+    {% include "subscriptions/_table.html" %}
+</div>
+{% endblock %}

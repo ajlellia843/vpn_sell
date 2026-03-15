@@ -1,0 +1,60 @@
+<div class="bg-white rounded-xl shadow-sm border border-gray-200">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Telegram ID</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Active</th>
+                    <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for user in users %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-5 py-3 text-sm text-gray-500 font-mono">{{ user.id[:8] }}…</td>
+                    <td class="px-5 py-3 text-sm text-gray-900 font-mono">{{ user.telegram_id }}</td>
+                    <td class="px-5 py-3 text-sm text-gray-700">{{ user.username or '—' }}</td>
+                    <td class="px-5 py-3 text-sm text-gray-700">{{ user.first_name or '—' }}</td>
+                    <td class="px-5 py-3 text-sm">
+                        {% if user.is_active %}
+                            <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">Yes</span>
+                        {% else %}
+                            <span class="inline-flex items-center rounded-full bg-red-50 px-2 py-1 text-xs font-medium text-red-700">No</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-5 py-3 text-sm text-gray-500">{{ user.created_at[:19] | replace("T", " ") }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="px-5 py-8 text-center text-sm text-gray-400">No users found</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if total_pages > 1 %}
+<div class="mt-4 flex items-center justify-between">
+    <div class="text-sm text-gray-500">
+        Page {{ page }} of {{ total_pages }}
+    </div>
+    <div class="flex gap-2">
+        {% if page > 1 %}
+        <a href="/users?page={{ page - 1 }}&limit={{ limit }}&telegram_id={{ telegram_id }}"
+           class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+            Previous
+        </a>
+        {% endif %}
+        {% if page < total_pages %}
+        <a href="/users?page={{ page + 1 }}&limit={{ limit }}&telegram_id={{ telegram_id }}"
+           class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+            Next
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
