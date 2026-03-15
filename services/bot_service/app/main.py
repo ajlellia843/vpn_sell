@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import sys
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
@@ -17,7 +16,16 @@ from fastapi.responses import JSONResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from app.config import BotSettings
-from app.handlers import orders, plans, start, subscription
+from app.handlers import (
+    instructions,
+    payments,
+    plans,
+    referral,
+    start,
+    subscription,
+    support,
+    terms,
+)
 from app.middlewares.correlation import CorrelationMiddleware
 from app.middlewares.error_handler import ErrorHandlerMiddleware
 from app.middlewares.logging import LoggingMiddleware
@@ -51,8 +59,12 @@ dp.callback_query.outer_middleware(ErrorHandlerMiddleware())
 
 dp.include_router(start.router)
 dp.include_router(plans.router)
-dp.include_router(orders.router)
+dp.include_router(payments.router)
 dp.include_router(subscription.router)
+dp.include_router(support.router)
+dp.include_router(terms.router)
+dp.include_router(referral.router)
+dp.include_router(instructions.router)
 
 api_client = APIClient(
     base_url=settings.api_gateway_url,

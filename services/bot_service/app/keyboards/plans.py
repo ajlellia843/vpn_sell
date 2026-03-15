@@ -1,11 +1,20 @@
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+"""Inline keyboards for plan selection (dynamic from API)."""
+
+from aiogram.types import InlineKeyboardMarkup
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+
+from app.utils.callbacks import CommonMenuCallback, PlanChoiceCallback
+from app.utils.formatting import format_plan_button
 
 
-def plans_keyboard(plans: list[dict]) -> InlineKeyboardMarkup:
-    buttons: list[list[InlineKeyboardButton]] = []
+def plan_selection_keyboard(plans: list[dict]) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
     for plan in plans:
-        text = f"{plan['name']} — {plan['price']} {plan.get('currency', '₽')} / {plan['duration_days']} дней"
-        buttons.append(
-            [InlineKeyboardButton(text=text, callback_data=f"plan:{plan['id']}")]
+        label = format_plan_button(plan)
+        builder.button(
+            text=label,
+            callback_data=PlanChoiceCallback(plan=str(plan["id"])),
         )
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
+    builder.button(text="⬅️ Назад", callback_data=CommonMenuCallback(action="back"))
+    builder.adjust(1)
+    return builder.as_markup()

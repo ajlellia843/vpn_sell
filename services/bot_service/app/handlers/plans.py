@@ -1,77 +1,49 @@
-from aiogram import F, Router
-from aiogram.types import CallbackQuery, Message
+"""Handlers for subscription plan selection (dynamic from API)."""
 
-from app.keyboards.inline import confirm_keyboard, payment_keyboard
-from app.keyboards.plans import plans_keyboard
+from __future__ import annotations
+
+import structlog
+from aiogram import Router
+from aiogram.types import CallbackQuery
+
+from app.keyboards.payments import payment_methods_keyboard
 from app.services.api_client import APIClient, APIError
-from app.utils.formatting import format_plan
+from app.texts.payments import payment_methods_text
+from app.utils.callbacks import PlanChoiceCallback
+
+logger = structlog.get_logger(__name__)
 
 router = Router(name="plans")
 
-
-@router.message(F.text == "🔑 Тарифы")
-async def show_plans(message: Message) -> None:
-    api: APIClient = message.bot["api_client"]  # type: ignore[index]
-    try:
-        plans = await api.get_plans()
-    except APIError:
-        await message.answer("Не удалось загрузить тарифы. Попробуйте позже.")
-        return
-
-    if not plans:
-        await message.answer("Тарифы временно недоступны.")
-        return
-
-    await message.answer("Выберите тариф:", reply_markup=plans_keyboard(plans))
+_plan_cache: dict[str, dict] = {}
 
 
-@router.callback_query(F.data.startswith("plan:"))
-async def select_plan(callback: CallbackQuery) -> None:
-    api: APIClient = callback.bot["api_client"]  # type: ignore[index]
-    plan_id = callback.data.split(":", 1)[1]  # type: ignore[union-attr]
-
-    try:
-        plans = await api.get_plans()
-    except APIError:
-        await callback.answer("Ошибка загрузки", show_alert=True)
-        return
-
-    plan = next((p for p in plans if str(p["id"]) == plan_id), None)
-    if plan is None:
-        await callback.answer("Тариф не найден", show_alert=True)
-        return
-
-    text = format_plan(plan) + "\n\nПодтвердить выбор?"
-    await callback.message.edit_text(  # type: ignore[union-attr]
-        text,
-        reply_markup=confirm_keyboard(f"confirm_plan:{plan_id}"),
-    )
-    await callback.answer()
+def _api(bot) -> APIClient:  # noqa: ANN001
+    return bot["api_client"]
 
 
-@router.callback_query(F.data.startswith("confirm_plan:"))
-async def confirm_plan(callback: CallbackQuery) -> None:
-    api: APIClient = callback.bot["api_client"]  # type: ignore[index]
-    plan_id = callback.data.split(":", 1)[1]  # type: ignore[union-attr]
-    user = callback.from_user
+@router.callback_query(PlanChoiceCallback.filter())
+async def handle_plan_choice(
+    callback_query: CallbackQuery, callback_data: PlanChoiceCallback
+) -> None:
+    plan_id = callback_data.plan
 
-    try:
-        order = await api.create_order(telegram_id=user.id, plan_id=plan_id)
-    except APIError:
-        await callback.answer("Не удалось создать заказ", show_alert=True)
-        return
+    plan = _plan_cache.get(plan_id)
+    if not plan:
+        try:
+            plans = await _api(callback_query.bot).get_plans()
+            for p in plans:
+                _plan_cache[str(p["id"])] = p
+            plan = _plan_cache.get(plan_id)
+        except APIError:
+            plan = None
 
-    payment_url = order.get("payment_url", "")
-    order_id = str(order["id"])
+    amount_rub = int(plan["price"]) if plan else 0
 
-    await callback.message.edit_text(  # type: ignore[union-attr]
-        "Заказ создан! Перейдите к оплате:",
-        reply_markup=payment_keyboard(payment_url, order_id),
-    )
-    await callback.answer()
-
-
-@router.callback_query(F.data == "cancel")
-async def cancel_action(callback: CallbackQuery) -> None:
-    await callback.message.delete()  # type: ignore[union-attr]
-    await callback.answer("Отменено")
+    if callback_query.message:
+        await callback_query.message.edit_text(
+            payment_methods_text(),
+            reply_markup=payment_methods_keyboard(plan=plan_id, amount_rub=amount_rub),
+            parse_mode="HTML",
+        )
+    await callback_query.answer()

@@ -1,46 +1,45 @@
-from aiogram import F, Router
-from aiogram.types import Message
+"""Handlers for viewing active subscription and VPN access."""
 
+from __future__ import annotations
+
+import structlog
+from aiogram import F, Router
+from aiogram.types import CallbackQuery
+
+from app.keyboards.common import menu_keyboard
 from app.services.api_client import APIClient, APIError
+from app.utils.callbacks import CommonMenuCallback
 from app.utils.formatting import format_subscription
+
+logger = structlog.get_logger(__name__)
 
 router = Router(name="subscription")
 
-_HELP_TEXT = (
-    "❓ <b>Помощь</b>\n\n"
-    "Этот бот помогает управлять VPN подпиской.\n\n"
-    "• <b>🔑 Тарифы</b> — выбрать и оплатить тариф\n"
-    "• <b>📱 Моя подписка</b> — информация о текущей подписке\n\n"
-    "По вопросам обращайтесь: @support"
-)
+
+def _api(bot) -> APIClient:  # noqa: ANN001
+    return bot["api_client"]
 
 
-@router.message(F.text == "📱 Моя подписка")
-async def show_subscription(message: Message) -> None:
-    api: APIClient = message.bot["api_client"]  # type: ignore[index]
-    user = message.from_user
-    if not user:
-        return
-
+@router.callback_query(CommonMenuCallback.filter(F.action == "my_sub"))
+async def show_subscription(callback_query: CallbackQuery) -> None:
+    telegram_id = callback_query.from_user.id if callback_query.from_user else 0
     try:
-        data = await api.get_subscription(telegram_id=user.id)
+        data = await _api(callback_query.bot).get_subscription(telegram_id)
+        sub = data.get("subscription")
+        vpn = data.get("vpn_access")
     except APIError:
-        await message.answer("Не удалось загрузить информацию о подписке.")
-        return
+        sub = None
+        vpn = None
 
-    sub = data.get("subscription")
-    vpn = data.get("vpn_access")
+    if sub:
+        text = format_subscription(sub, vpn)
+    else:
+        text = "У вас пока нет активной подписки."
 
-    if not sub:
-        await message.answer(
-            "У вас нет активной подписки. Выберите тариф!",
+    if callback_query.message:
+        await callback_query.message.edit_text(
+            text,
+            reply_markup=menu_keyboard(),
             parse_mode="HTML",
         )
-        return
-
-    await message.answer(format_subscription(sub, vpn), parse_mode="HTML")
-
-
-@router.message(F.text == "❓ Помощь")
-async def show_help(message: Message) -> None:
-    await message.answer(_HELP_TEXT, parse_mode="HTML")
+    await callback_query.answer()
