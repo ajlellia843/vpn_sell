@@ -14,14 +14,22 @@ class Base(DeclarativeBase):
     pass
 
 
-def build_engine(db_url: str, echo: bool = False, pool_size: int = 5, max_overflow: int = 10):
-    return create_async_engine(
-        db_url,
-        echo=echo,
-        pool_size=pool_size,
-        max_overflow=max_overflow,
-        pool_pre_ping=True,
-    )
+def build_engine(
+    db_url: str,
+    echo: bool = False,
+    pool_size: int = 5,
+    max_overflow: int = 10,
+    execution_options: dict[str, Any] | None = None,
+):
+    kwargs: dict[str, Any] = {
+        "echo": echo,
+        "pool_size": pool_size,
+        "max_overflow": max_overflow,
+        "pool_pre_ping": True,
+    }
+    if execution_options:
+        kwargs["execution_options"] = execution_options
+    return create_async_engine(db_url, **kwargs)
 
 
 def build_session_factory(engine) -> async_sessionmaker[AsyncSession]:
@@ -39,19 +47,20 @@ class DatabaseManager:
         pool_size: int = 5,
         max_overflow: int = 10,
     ) -> None:
-        # #region agent log
-        import sqlalchemy; print(f"[DEBUG-68820d] H1: sqlalchemy version={sqlalchemy.__version__}, schema={schema}", flush=True)
-        # #endregion
-        self.engine = build_engine(db_url, echo=echo, pool_size=pool_size, max_overflow=max_overflow)
-        self._schema = schema
-
-        kwargs: dict[str, Any] = {"expire_on_commit": False}
+        exec_opts = None
         if schema:
-            kwargs["execution_options"] = {"schema_translate_map": {None: schema}}
+            exec_opts = {"schema_translate_map": {None: schema}}
+
         # #region agent log
-        print(f"[DEBUG-68820d] H1: async_sessionmaker kwargs={kwargs}", flush=True)
+        import sqlalchemy; print(f"[DEBUG-68820d] H1-fix: sqlalchemy={sqlalchemy.__version__}, schema={schema}, exec_opts={exec_opts}", flush=True)
         # #endregion
-        self.session_factory = async_sessionmaker(self.engine, **kwargs)
+
+        self.engine = build_engine(
+            db_url, echo=echo, pool_size=pool_size,
+            max_overflow=max_overflow, execution_options=exec_opts,
+        )
+        self._schema = schema
+        self.session_factory = async_sessionmaker(self.engine, expire_on_commit=False)
 
     async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
         async with self.session_factory() as session:
