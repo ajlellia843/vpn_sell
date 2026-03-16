@@ -51,10 +51,6 @@ class DatabaseManager:
         if schema:
             exec_opts = {"schema_translate_map": {None: schema}}
 
-        # #region agent log
-        import sqlalchemy; print(f"[DEBUG-68820d] H1-fix: sqlalchemy={sqlalchemy.__version__}, schema={schema}, exec_opts={exec_opts}", flush=True)
-        # #endregion
-
         self.engine = build_engine(
             db_url, echo=echo, pool_size=pool_size,
             max_overflow=max_overflow, execution_options=exec_opts,
