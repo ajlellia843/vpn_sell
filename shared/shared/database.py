@@ -39,12 +39,18 @@ class DatabaseManager:
         pool_size: int = 5,
         max_overflow: int = 10,
     ) -> None:
+        # #region agent log
+        import sqlalchemy; print(f"[DEBUG-68820d] H1: sqlalchemy version={sqlalchemy.__version__}, schema={schema}", flush=True)
+        # #endregion
         self.engine = build_engine(db_url, echo=echo, pool_size=pool_size, max_overflow=max_overflow)
         self._schema = schema
 
         kwargs: dict[str, Any] = {"expire_on_commit": False}
         if schema:
             kwargs["execution_options"] = {"schema_translate_map": {None: schema}}
+        # #region agent log
+        print(f"[DEBUG-68820d] H1: async_sessionmaker kwargs={kwargs}", flush=True)
+        # #endregion
         self.session_factory = async_sessionmaker(self.engine, **kwargs)
 
     async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
