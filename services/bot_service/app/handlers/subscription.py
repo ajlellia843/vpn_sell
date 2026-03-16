@@ -16,15 +16,11 @@ logger = structlog.get_logger(__name__)
 router = Router(name="subscription")
 
 
-def _api(bot) -> APIClient:  # noqa: ANN001
-    return bot["api_client"]
-
-
 @router.callback_query(CommonMenuCallback.filter(F.action == "my_sub"))
-async def show_subscription(callback_query: CallbackQuery) -> None:
+async def show_subscription(callback_query: CallbackQuery, api_client: APIClient) -> None:
     telegram_id = callback_query.from_user.id if callback_query.from_user else 0
     try:
-        data = await _api(callback_query.bot).get_subscription(telegram_id)
+        data = await api_client.get_subscription(telegram_id)
         sub = data.get("subscription")
         vpn = data.get("vpn_access")
     except APIError:

@@ -18,20 +18,16 @@ router = Router(name="plans")
 _plan_cache: dict[str, dict] = {}
 
 
-def _api(bot) -> APIClient:  # noqa: ANN001
-    return bot["api_client"]
-
-
 @router.callback_query(PlanChoiceCallback.filter())
 async def handle_plan_choice(
-    callback_query: CallbackQuery, callback_data: PlanChoiceCallback
+    callback_query: CallbackQuery, callback_data: PlanChoiceCallback, api_client: APIClient
 ) -> None:
     plan_id = callback_data.plan
 
     plan = _plan_cache.get(plan_id)
     if not plan:
         try:
-            plans = await _api(callback_query.bot).get_plans()
+            plans = await api_client.get_plans()
             for p in plans:
                 _plan_cache[str(p["id"])] = p
             plan = _plan_cache.get(plan_id)

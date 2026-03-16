@@ -73,7 +73,7 @@ api_client = APIClient(
     base_url=settings.api_gateway_url,
     api_key=settings.service_api_key,
 )
-bot["api_client"] = api_client
+dp["api_client"] = api_client
 
 
 @asynccontextmanager

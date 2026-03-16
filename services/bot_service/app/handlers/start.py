@@ -34,12 +34,8 @@ logger = structlog.get_logger(__name__)
 router = Router(name="start")
 
 
-def _api(bot) -> APIClient:  # noqa: ANN001
-    return bot["api_client"]
-
-
 @router.message(CommandStart())
-async def start_command(message: Message) -> None:
+async def start_command(message: Message, api_client: APIClient) -> None:
     # #region agent log
     _log_path = Path(__file__).resolve().parent.parent.parent.parent.parent / "debug-56837c.log"
     try:
@@ -51,7 +47,7 @@ async def start_command(message: Message) -> None:
     user = message.from_user
     if user:
         try:
-            await _api(message.bot).get_me(
+            await api_client.get_me(
                 telegram_id=user.id,
                 username=user.username,
                 first_name=user.first_name,
@@ -92,9 +88,9 @@ async def back_to_menu(callback_query: CallbackQuery) -> None:
 
 
 @router.callback_query(CommonMenuCallback.filter(F.action == "get_vpn"))
-async def show_purchase_screen(callback_query: CallbackQuery) -> None:
+async def show_purchase_screen(callback_query: CallbackQuery, api_client: APIClient) -> None:
     try:
-        plans = await _api(callback_query.bot).get_plans()
+        plans = await api_client.get_plans()
     except APIError:
         plans = []
     if callback_query.message:

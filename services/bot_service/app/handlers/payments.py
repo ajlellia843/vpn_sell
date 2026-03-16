@@ -17,10 +17,6 @@ logger = structlog.get_logger(__name__)
 router = Router(name="payments")
 
 
-def _api(bot) -> APIClient:  # noqa: ANN001
-    return bot["api_client"]
-
-
 @router.callback_query(PaymentActionCallback.filter(F.action == "methods"))
 async def show_payment_methods(
     callback_query: CallbackQuery, callback_data: PaymentActionCallback
@@ -39,14 +35,14 @@ async def show_payment_methods(
 
 @router.callback_query(PaymentMethodCallback.filter())
 async def handle_payment_method(
-    callback_query: CallbackQuery, callback_data: PaymentMethodCallback
+    callback_query: CallbackQuery, callback_data: PaymentMethodCallback, api_client: APIClient
 ) -> None:
     telegram_id = callback_query.from_user.id if callback_query.from_user else 0
     plan_id = callback_data.plan
     amount_rub = callback_data.amount
 
     try:
-        order = await _api(callback_query.bot).create_order(telegram_id, plan_id)
+        order = await api_client.create_order(telegram_id, plan_id)
         payment_url = order.get("payment_url", "")
         order_id = str(order.get("id", ""))
     except APIError as exc:
@@ -73,14 +69,14 @@ async def handle_payment_method(
 
 
 @router.callback_query(F.data.startswith("check_payment:"))
-async def check_payment(callback_query: CallbackQuery) -> None:
+async def check_payment(callback_query: CallbackQuery, api_client: APIClient) -> None:
     order_id = (callback_query.data or "").split(":", 1)[-1]
     if not order_id:
         await callback_query.answer("Заказ не найден")
         return
 
     try:
-        order = await _api(callback_query.bot).get_order(order_id)
+        order = await api_client.get_order(order_id)
     except APIError:
         await callback_query.answer("Ошибка проверки. Попробуйте позже.")
         return
