@@ -8,6 +8,11 @@ class AdminServiceSettings(BaseServiceSettings):
     billing_service_url: str
     vpn_service_url: str
 
+    # Stubs (env: USE_STUB_USER_SERVICE, USE_STUB_BILLING_SERVICE, USE_STUB_VPN_SERVICE)
+    use_stub_user_service: bool = False
+    use_stub_billing_service: bool = False
+    use_stub_vpn_service: bool = False
+
     admin_username: str = "admin"
     admin_password_hash: str
     admin_jwt_secret: str

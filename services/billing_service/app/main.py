@@ -3,7 +3,6 @@ from collections.abc import AsyncGenerator
 
 from fastapi import FastAPI
 
-from shared.clients.vpn import VPNServiceClient
 from shared.database import DatabaseManager
 from shared.exceptions import register_exception_handlers
 from shared.health import create_health_router
@@ -12,8 +11,8 @@ from shared.metrics import setup_metrics
 from shared.service_auth import ServiceAuthMiddleware
 
 from app.config import BillingServiceSettings
+from app.providers import provide_payment_provider, provide_vpn_client
 from app.routes import order, plan, subscription, webhook
-from app.services.yookassa import YooKassaService
 
 settings = BillingServiceSettings()
 
@@ -33,16 +32,8 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     await db.create_schema()
 
     _app.state.db = db
-    _app.state.vpn_client = VPNServiceClient(
-        base_url=settings.vpn_service_url,
-        service_api_key=settings.service_api_key,
-    )
-    _app.state.yookassa = YooKassaService(
-        shop_id=settings.yookassa_shop_id,
-        secret_key=settings.yookassa_secret_key,
-        return_url=settings.yookassa_return_url,
-        webhook_secret=settings.yookassa_webhook_secret,
-    )
+    _app.state.vpn_client = provide_vpn_client(settings)
+    _app.state.yookassa = provide_payment_provider(settings)
 
     yield
 

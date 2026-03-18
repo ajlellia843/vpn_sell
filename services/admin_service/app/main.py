@@ -6,9 +6,6 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from shared.clients.billing import BillingServiceClient
-from shared.clients.user import UserServiceClient
-from shared.clients.vpn import VPNServiceClient
 from shared.database import Base, DatabaseManager
 from shared.exceptions import register_exception_handlers
 from shared.health import create_health_router
@@ -18,6 +15,7 @@ from shared.metrics import setup_metrics
 from app.auth import _LoginRedirectException, login_redirect_handler
 from app.config import AdminServiceSettings
 from app.models.audit_log import AuditLog  # noqa: F401 — register model with Base
+from app.providers import provide_billing_client, provide_user_client, provide_vpn_client
 
 APP_DIR = Path(__file__).resolve().parent
 
@@ -40,18 +38,9 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     async with db.engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    _app.state.user_client = UserServiceClient(
-        base_url=settings.user_service_url,
-        service_api_key=settings.service_api_key,
-    )
-    _app.state.billing_client = BillingServiceClient(
-        base_url=settings.billing_service_url,
-        service_api_key=settings.service_api_key,
-    )
-    _app.state.vpn_client = VPNServiceClient(
-        base_url=settings.vpn_service_url,
-        service_api_key=settings.service_api_key,
-    )
+    _app.state.user_client = provide_user_client(settings)
+    _app.state.billing_client = provide_billing_client(settings)
+    _app.state.vpn_client = provide_vpn_client(settings)
 
     yield
 

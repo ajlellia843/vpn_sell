@@ -33,7 +33,7 @@ from app.middlewares.correlation import CorrelationMiddleware
 from app.middlewares.error_handler import ErrorHandlerMiddleware
 from app.middlewares.logging import LoggingMiddleware
 from app.middlewares.rate_limit import RateLimitMiddleware
-from app.services.api_client import APIClient
+from app.providers import provide_gateway_client
 
 try:
     from shared.logging import setup_logging
@@ -69,10 +69,7 @@ dp.include_router(terms.router)
 dp.include_router(referral.router)
 dp.include_router(instructions.router)
 
-api_client = APIClient(
-    base_url=settings.api_gateway_url,
-    api_key=settings.service_api_key,
-)
+api_client = provide_gateway_client(settings)
 dp["api_client"] = api_client
 
 

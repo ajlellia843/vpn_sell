@@ -9,8 +9,8 @@ from shared.logging import get_logger, setup_logging
 from shared.metrics import setup_metrics
 from shared.service_auth import ServiceAuthMiddleware
 
-from app.adapters.xui import XUIAdapter
 from app.config import VPNServiceSettings
+from app.providers import provide_vpn_panel_adapter
 from app.routes.vpn import router as vpn_router
 
 logger = get_logger(__name__)
@@ -23,12 +23,7 @@ async def lifespan(app: FastAPI):
 
     await db.create_schema()
 
-    adapter = XUIAdapter(
-        base_url=settings.xui_base_url,
-        username=settings.xui_username,
-        password=settings.xui_password,
-        inbound_id=settings.xui_inbound_id,
-    )
+    adapter = provide_vpn_panel_adapter(settings)
     await adapter.authenticate()
     app.state.vpn_adapter = adapter
 

@@ -3,9 +3,6 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from shared.clients.billing import BillingServiceClient
-from shared.clients.user import UserServiceClient
-from shared.clients.vpn import VPNServiceClient
 from shared.exceptions import register_exception_handlers
 from shared.health import create_health_router_no_db
 from shared.logging import setup_logging
@@ -13,6 +10,7 @@ from shared.metrics import setup_metrics
 
 from app.config import GatewaySettings
 from app.middleware.correlation import CorrelationIdMiddleware
+from app.providers import provide_billing_client, provide_user_client, provide_vpn_client
 from app.routes.bot import router as bot_router
 from app.routes.webhooks import router as webhooks_router
 
@@ -21,18 +19,9 @@ settings = GatewaySettings()
 
 @asynccontextmanager
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
-    application.state.user_client = UserServiceClient(
-        base_url=settings.user_service_url,
-        service_api_key=settings.service_api_key,
-    )
-    application.state.billing_client = BillingServiceClient(
-        base_url=settings.billing_service_url,
-        service_api_key=settings.service_api_key,
-    )
-    application.state.vpn_client = VPNServiceClient(
-        base_url=settings.vpn_service_url,
-        service_api_key=settings.service_api_key,
-    )
+    application.state.user_client = provide_user_client(settings)
+    application.state.billing_client = provide_billing_client(settings)
+    application.state.vpn_client = provide_vpn_client(settings)
     application.state.billing_service_url = settings.billing_service_url
 
     yield

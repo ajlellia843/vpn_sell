@@ -7,3 +7,6 @@ class VPNServiceSettings(BaseServiceSettings):
     xui_username: str
     xui_password: str
     xui_inbound_id: int = 1
+
+    # Stub: use stub instead of real 3x-ui adapter (env: USE_STUB_XUI)
+    use_stub_xui: bool = False
