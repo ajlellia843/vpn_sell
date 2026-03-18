@@ -3,23 +3,23 @@ from typing import Any
 from fastapi import APIRouter, Query, Request
 from pydantic import BaseModel
 
-from shared.clients.billing import BillingServiceClient
-from shared.clients.user import UserServiceClient
-from shared.clients.vpn import VPNServiceClient
 from shared.exceptions import NotFoundError
+from shared.protocols.billing import BillingServiceClientProtocol
+from shared.protocols.user import UserServiceClientProtocol
+from shared.protocols.vpn import VPNServiceClientProtocol
 
 router = APIRouter(prefix="/bot", tags=["bot"])
 
 
-def _user_client(request: Request) -> UserServiceClient:
+def _user_client(request: Request) -> UserServiceClientProtocol:
     return request.app.state.user_client
 
 
-def _billing_client(request: Request) -> BillingServiceClient:
+def _billing_client(request: Request) -> BillingServiceClientProtocol:
     return request.app.state.billing_client
 
 
-def _vpn_client(request: Request) -> VPNServiceClient:
+def _vpn_client(request: Request) -> VPNServiceClientProtocol:
     return request.app.state.vpn_client
 
 
